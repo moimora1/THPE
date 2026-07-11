@@ -1,5 +1,57 @@
 # Changelog — THPE fit code
 
+## v1.8 — 2026-07-10 — Campaña de confrontación con datos (DR1→DR2→CMB)
+
+Esta versión cierra la campaña empírica completa de la THPE contra los
+mejores datos geométricos públicos. Resumen del veredicto: con
+BAO (DESI DR2) + SNe Ia (Pantheon+) + ancla de distancia del CMB
+(Planck 2018), la evidencia bayesiana favorece **fuertemente** a ΛCDM
+sobre todas las variantes de la THPE, y el término de entropía del
+horizonte (γ) queda excluido. Las contribuciones informacionales
+restantes se acotan por debajo del ~1% de la densidad de energía
+oscura. La THPE no queda falsada (es compatible con los datos) pero sí
+resulta innecesaria en su parametrización actual.
+
+### Añadido
+
+- **`THPE_fit_v18.py`** — soporte para DESI DR2 (13 observables con
+  correlaciones) como dataset por defecto, seleccionable con
+  `--dataset dr1|dr2`. Valores verificados contra la fuente primaria.
+- **`THPE_dynesty_v1.py`** — evidencia bayesiana por muestreo anidado
+  (dynesty). Sustituye a la media armónica (no publicable). Calcula
+  ln B para las variantes THPE-4p, THPE-3p (γ=0) y las de un solo
+  trazador (solo-α, solo-β) frente a ΛCDM, con control de anidamiento.
+- **`THPE_dynesty_v2_cmb.py`** — añade el ancla de distancia del CMB
+  (parámetros comprimidos R y ℓ_A de Planck 2018), autocalibrada al
+  fondo del pipeline. Incluye un centinela que aborta si el χ² del
+  control ΛCDM es incoherente (evita resultados inválidos por errores
+  de transcripción o de modelado del fondo).
+
+### Resultados de la campaña
+
+| Datos | Variante | ln B vs ΛCDM | Veredicto |
+|---|---|---|---|
+| DR1 (BAO+SNe) | THPE-4p | ΔAIC=+10.5 | pro-ΛCDM |
+| DR2 (BAO+SNe) | solo-α (f_SFR) | −4.94 ± 0.4 | moderado pro-ΛCDM |
+| DR2 (BAO+SNe) | THPE-3p | −11.06 ± 0.3 | fuerte pro-ΛCDM |
+| **DR2+CMB** | **solo-α** | **−7.43 ± 0.19** | **fuerte pro-ΛCDM** |
+| **DR2+CMB** | **THPE-3p** | **−14.79 ± 0.22** | **fuerte pro-ΛCDM** |
+
+Cotas finales (68%): α < 0.008, β < 0.07, |γ| < ~10⁻³. El mejor ajuste
+THPE coincide exactamente con ΛCDM (Δχ² = 0; α=0 en el máximo).
+
+### Nota metodológica (control de calidad)
+
+Durante la campaña, los controles de coherencia detectaron y
+descartaron automáticamente dos corridas inválidas: (i) un ln B = +290
+espurio a favor de la THPE causado por un truncamiento de la integral
+del horizonte del sonido (r_s = 139 en vez de 144.4 Mpc); (ii) un
+desajuste común de modelado del fondo (~0.1%) que sesgaba el ancla.
+Ambos fueron señalados por el centinela `χ²_CMB(ΛCDM)` antes de
+producir resultados. Documentado como advertencia: en comparación
+bayesiana de modelos, un control de coherencia sobre el modelo de
+referencia es imprescindible.
+
 ## v1.7.1 — 2026-07-05
 
 ### Performance (critical for usability)
@@ -46,44 +98,24 @@
   ΛCDM (Planck 2018) this produced χ² ≈ 186 over 7 points, with a spurious
   +8.4σ pull at z = 2.33. Any fit run on that vector is invalid: the MCMC
   would absorb the artifact by inflating α, β, γ, producing false support
-  for THPE. v1.7 embeds the real DESI DR1 data vector — 12 observables:
-  five (D_M/r_d, D_H/r_d) pairs with per-tracer correlation coefficients
-  (LRG1, LRG2, LRG3+ELG1, ELG2, Lya) plus D_V/r_d for BGS and QSO.
+  for THPE. v1.7 embeds the real DESI DR1 data vector — 12 observables.
   Verified: χ²(ΛCDM) = 20.6 / 12 points (χ²/n = 1.72).
 
 - **SNIa likelihood.** v1.6 compared `MU_SH0ES` (SH0ES-calibrated,
   H0 ≈ 73) against a model normalised with H0 = 67.4 (Planck), injecting
-  ~0.17 mag of calibration bias into the χ². v1.7 marginalises the constant
-  magnitude offset analytically:
-  χ²_marg = ΔᵀC⁻¹Δ − (ΔᵀC⁻¹1)² / (1ᵀC⁻¹1).
-  Verified: the likelihood is invariant under constant offsets to machine
-  precision (Δ log L ≈ 1e-13 for a +0.17 mag shift), and the estimator
-  recovers an injected offset exactly.
+  ~0.17 mag of calibration bias into the χ². v1.7 marginalises the
+  constant magnitude offset analytically.
 
 ### Added
 
-- Startup sanity check: the script aborts if χ²(ΛCDM)/n > 5 against the
-  BAO vector, so a data/bookkeeping error can never again pass silently.
-- Support for the full Pantheon+ STAT+SYS covariance matrix
-  (`Pantheon+SH0ES_STAT+SYS.cov`), sliced to the z > 0.01 mask.
-- Best-offset estimator `best_offset_SNIa()` for visualisation.
-- Separate D_M/r_d and D_H/r_d panels in the results figure; the Hubble
-  diagram displays the marginalised ΔM.
-
-### Changed
-
-- Removed the unverified DESI download URL; DESI DR1 values are embedded
-  with an explicit instruction to verify them against arXiv:2404.03002.
-- Requirements: `pandas` and `requests` documented (both were already used
-  by v1.6 but missing from the README).
+- Startup sanity check: aborts if χ²(ΛCDM)/n > 5 against the BAO vector.
+- Support for the full Pantheon+ STAT+SYS covariance matrix.
 
 ### Notes
 
 - v1.6 is kept in the repository as a historical record. No result
   produced by v1.6 should be used or cited.
-- The harmonic-mean evidence estimator remains approximate; for
-  publication use nested sampling (MultiNest, PolyChord, dynesty).
 
 ## v1.6 — 2026-06-25
 
-Initial public release. Superseded by v1.7 (see above).
+Initial public release. Superseded (see above).
